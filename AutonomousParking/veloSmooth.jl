@@ -44,11 +44,11 @@ function veloSmooth(v,amax,Ts)
 
 	accPhase = Int(round(abs(v[1])/amax/Ts))
 
-	index1 = find((diff(v_ex).>v_cut1) & (diff(v_ex).<v_cut2))
-	index2 = find(diff(v_ex).>v_cut2)
+	index1 = findall((diff(v_ex, dims=2).>v_cut1) .& (diff(v_ex, dims=2).<v_cut2))
+	index2 = findall(diff(v_ex, dims=2).>v_cut2)
 
-	index3 = find((diff(v_ex).<-v_cut1) & (diff(v_ex).>-v_cut2))
-	index4 = find(diff(v_ex).<-v_cut2)
+	index3 = findall((diff(v_ex, dims=2).<-v_cut1) .& (diff(v_ex, dims=2).>-v_cut2))
+	index4 = findall(diff(v_ex, dims=2).<-v_cut2)
 
 	if length(index1) >=1 && index1[1]==19
 		index1[1] = index1[1]+1
@@ -102,7 +102,7 @@ function veloSmooth(v,amax,Ts)
 		end
 	end
 	
-	a = diff(v_barMM')./Ts
+	a = diff(v_barMM', dims=1)./Ts
 
 	return v_barMM', a
 

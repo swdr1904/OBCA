@@ -76,7 +76,7 @@ function rect_check(ix, iy, iyaw, ox, oy)
             y2 = vry[i+1] - ly
             d1 = hypot(x1,y1)
             d2 = hypot(x2,y2)
-            theta1 = atan2(y1,x1)
+            theta1 = atan(y1,x1)
             tty = (-sin(theta1)*x2 + cos(theta1)*y2)
 
             tmp = (x1*x2+y1*y2)/(d1*d2)

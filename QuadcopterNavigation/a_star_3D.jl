@@ -25,12 +25,14 @@
 module a_star	# new scope, good for defining global variables
 
 using NearestNeighbors, JuMP, Ipopt
+using DataStructures 
 using PyPlot
 
 const VEHICLE_RADIUS = 2.5# const GRID_RESOLUTION = 1.0 #[m], def 2.0
 const H_WEIGHT = 1.1	# weight for heuristic function
 
-type Node
+
+mutable struct Node
     x::Int64  #x index
     y::Int64  #y index
 	z::Int64  #z index (added)	
@@ -63,7 +65,8 @@ function calc_astar_path(sx::Float64, sy::Float64, sz::Float64, gx::Float64, gy:
 	oz: z position list of Obstacles [m]
     reso: grid resolution [m]
     """
-    tic()
+	# tic()
+	start = time();
 	
     nstart = Node(Int(round(sx/reso)),Int(round(sy/reso)),Int(round(sz/reso)),0.0, -1)
     ngoal = Node(Int(round(gx/reso)),Int(round(gy/reso)),Int(round(gz/reso)),0.0, -1)
@@ -75,16 +78,20 @@ function calc_astar_path(sx::Float64, sy::Float64, sz::Float64, gx::Float64, gy:
 	
 
     obmap, minx, miny, minz, maxx, maxy, maxz, xw, yw, zw = calc_obstacle_map(ox, oy, oz, xmin, ymin, zmin, xmax, ymax, zmax, reso)
-    miniTime = toq();
+    miniTime = time() - start;
     # print("MiniTime ",miniTime,"\n")
-    tic()
+    time_run = time();
     #open, closed set
     open, closed = Dict{Int64, Node}(), Dict{Int64, Node}()
 
-    pqOpen = Collections.PriorityQueue(Int64,Float64)
+    pqOpen = PriorityQueue()
 	
     open[calc_index(nstart, xw, zw, minx, miny, minz)] = nstart	# ??????; weird if start is minx miny minz -> zero indexing!
-    Collections.enqueue!(pqOpen,calc_index(nstart, xw, zw, minx, miny, minz),nstart.cost+H_WEIGHT*h(nstart.x - ngoal.x, nstart.y - ngoal.y, nstart.z-ngoal.z))
+	enqueue!(pqOpen,
+		calc_index(nstart, xw, zw, minx, miny, minz),
+		nstart.cost+H_WEIGHT*h(nstart.x - ngoal.x, 
+							   nstart.y - ngoal.y, 
+							   nstart.z-ngoal.z))
 
 
     motion = get_motion_model()
@@ -97,7 +104,7 @@ function calc_astar_path(sx::Float64, sy::Float64, sz::Float64, gx::Float64, gy:
 			break
 		end
 
-		c_id = Collections.dequeue!(pqOpen)
+		c_id = dequeue!(pqOpen)
 		current = open[c_id]
 
 
@@ -107,7 +114,7 @@ function calc_astar_path(sx::Float64, sy::Float64, sz::Float64, gx::Float64, gy:
             break
         end
 
-       	delete!(open, c_id)
+    	delete!(open, c_id)
         closed[c_id] = current
 
         for i in 1:nmotion # expand search grid based on motion model
@@ -139,7 +146,7 @@ function calc_astar_path(sx::Float64, sy::Float64, sz::Float64, gx::Float64, gy:
                 end
             else # add to open set
                 open[node_ind] = node
-                Collections.enqueue!(pqOpen,node_ind,node.cost+H_WEIGHT*h(node.x - ngoal.x, node.y - ngoal.y, node.z-ngoal.z))
+                enqueue!(pqOpen,node_ind,node.cost+H_WEIGHT*h(node.x - ngoal.x, node.y - ngoal.y, node.z-ngoal.z))
             end
         end		# end nmotion
 
@@ -147,7 +154,7 @@ function calc_astar_path(sx::Float64, sy::Float64, sz::Float64, gx::Float64, gy:
 	tmpCounter = tmpCounter + 1
 	
     end
-	runTime = toq()
+	runTime = time() - time_run;
     rx, ry, rz = get_final_path(closed, ngoal, nstart, xw, zw, minx, miny, minz, reso)
 
     return rx, ry, rz, runTime

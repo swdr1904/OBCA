@@ -30,11 +30,11 @@
 
 module reeds_shepp
 
-using PyPlot
+using PyPlot, Test
 
 const STEP_SIZE = 0.1
 
-type Path
+mutable struct Path
     lengths::Array{Float64} #lengths of each part of the path +: forward, -: backward
     ctypes::Array{String} # type of each part of the path
     L::Float64 # total path length
@@ -138,7 +138,7 @@ end
 
 function polar(x::Float64, y::Float64)
     r = sqrt(x^2+y^2)
-    theta = atan2(y, x)
+    theta = atan(y, x)
     return r, theta
 end
 
@@ -174,7 +174,7 @@ function LSR(x::Float64, y::Float64, phi::Float64)
     u1 = u1^2;
     if u1 >= 4.0
         u = sqrt(u1 - 4.0)
-        theta = atan2(2.0, u)
+        theta = atan(2.0, u)
         t = mod2pi(t1 + theta)
         v = mod2pi(t - phi)
 
@@ -222,7 +222,7 @@ function set_path(paths::Array{Path}, lengths::Array{Float64}, ctypes::Array{Str
 
     path.L = sum([abs(i) for i in lengths])
 
-    Base.Test.@test path.L >= 0.01
+    @test path.L >= 0.01
 
     push!(paths, path)
 
@@ -373,7 +373,7 @@ function calc_tauOmega(u::Float64, v::Float64, xi::Float64, eta::Float64, phi::F
     A = sin(u) - sin(delta)
     B = cos(u) - cos(delta) - 1.0
 
-    t1 = atan2(eta*A - xi*B, xi*A + eta*B)
+    t1 = atan(eta*A - xi*B, xi*A + eta*B)
     t2 = 2.0 * (cos(delta) - cos(v) - cos(u)) + 3.0;
 
     if t2 < 0
@@ -505,7 +505,7 @@ function LRSL(x::Float64, y::Float64, phi::Float64)
     if rho >= 2.0
         r = sqrt(rho*rho - 4.0);
         u = 2.0 - r;
-        t = mod2pi(theta + atan2(r, -2.0));
+        t = mod2pi(theta + atan(r, -2.0));
         v = mod2pi(phi - 0.5*pi - t);
         if t >= 0.0 && u<=0.0 && v<=0.0
             return true, t, u, v
@@ -629,7 +629,7 @@ function LRSLR(x::Float64, y::Float64, phi::Float64)
     if rho >= 2.0
         u = 4.0 - sqrt(rho*rho - 4.0)
         if u <= 0.0
-            t = mod2pi(atan2((4.0-u)*xi -2.0*eta, -2.0*xi + (u-4.0)*eta));
+            t = mod2pi(atan((4.0-u)*xi -2.0*eta, -2.0*xi + (u-4.0)*eta));
             v = mod2pi(t - phi);
 
             if t >= 0.0 && v >=0.0
@@ -848,21 +848,21 @@ function check_path(start_x, start_y, start_yaw, end_x, end_y, end_yaw, max_curv
     # println(start_x,",", start_y, "," ,start_yaw, ",", max_curvature)
     paths = calc_paths(start_x, start_y, start_yaw, end_x, end_y, end_yaw, max_curvature)
 
-    Base.Test.@test length(paths) >= 1
+    @test length(paths) >= 1
 
     for path in paths
-        Base.Test.@test abs(path.x[1] - start_x) <= 0.01
-        Base.Test.@test abs(path.y[1] - start_y) <= 0.01
-        Base.Test.@test abs(path.yaw[1] - start_yaw) <= 0.01
-        Base.Test.@test abs(path.x[end] - end_x) <= 0.01
-        Base.Test.@test abs(path.y[end] - end_y) <= 0.01
-        Base.Test.@test abs(path.yaw[end] - end_yaw) <= 0.01
+        @test abs(path.x[1] - start_x) <= 0.01
+        @test abs(path.y[1] - start_y) <= 0.01
+        @test abs(path.yaw[1] - start_yaw) <= 0.01
+        @test abs(path.x[end] - end_x) <= 0.01
+        @test abs(path.y[end] - end_y) <= 0.01
+        @test abs(path.yaw[end] - end_yaw) <= 0.01
 
         #course distance check
         d = [sqrt(dx^2+dy^2) for (dx, dy) in zip(diff(path.x[1:end-1]), diff(path.y[1:end-1]))] 
 
         for i in length(d)
-            Base.Test.@test abs(d[i] - STEP_SIZE) <= 0.001
+            @test abs(d[i] - STEP_SIZE) <= 0.001
         end
     end
 

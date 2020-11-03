@@ -38,10 +38,21 @@ function ParkingDist(x0,xF,N,Ts,L,ego,XYbounds,nOb,vOb, A, b,rx,ry,ryaw,fixTime,
 	# Define IPOPT as solver and well as solver settings
 	##############################
 	# seems to work best
-	m = Model(solver=IpoptSolver(hessian_approximation="exact",mumps_pivtol=1e-6,alpha_for_y="min",recalc_y="yes",
-	                             mumps_mem_percent=6000,max_iter=200,tol=1e-5, print_level=0,
- 								min_hessian_perturbation=1e-12,jacobian_regularization_value=1e-7))#,nlp_scaling_method="none"
-								 
+	m = Model(()-> Ipopt.Optimizer(
+		hessian_approximation= "exact",
+		max_iter=200,
+		mumps_pivtol=1e-6,
+		mumps_mem_percent=6000,
+		recalc_y="yes",
+		alpha_for_y="min",
+		required_infeasibility_reduction=0.6,
+		min_hessian_perturbation=1e-12,
+		jacobian_regularization_value=1e-7,
+		tol=1e-5,
+		print_level=0
+	)
+	)
+	
 	# fixTime = 0
 	##############################
 	# defining optimization variables
@@ -69,10 +80,10 @@ function ParkingDist(x0,xF,N,Ts,L,ego,XYbounds,nOb,vOb, A, b,rx,ry,ryaw,fixTime,
 	# (min time)+
 	# (regularization dual variables)
 	##############################
-	 # @NLobjective(m, Min,sum(0.1*u[1,i]^2 + 1*u[2,i]^2 for i = 1:N) + 
-	 # 					 sum(0.5*timeScale[i] + 1*timeScale[i]^2 for i = 1:N+1)+
-	 #                     0*sum(sum(reg*n[j,i]^2 for i = 1:N+1)  for j = 1:4) + 
-		# 				 0*sum(sum(reg*l[j,i]^2 for i = 1:N+1)  for j = 1:sum(vOb)) ) 
+	# @NLobjective(m, Min,sum(0.1*u[1,i]^2 + 1*u[2,i]^2 for i = 1:N) + 
+	# 					 sum(0.5*timeScale[i] + 1*timeScale[i]^2 for i = 1:N+1)+
+	#                     0*sum(sum(reg*n[j,i]^2 for i = 1:N+1)  for j = 1:4) + 
+	# 				 0*sum(sum(reg*l[j,i]^2 for i = 1:N+1)  for j = 1:sum(vOb)) ) 
 	u0 = [0,0]
 	#fix time objective
 	if fixTime == 1
@@ -139,21 +150,21 @@ function ParkingDist(x0,xF,N,Ts,L,ego,XYbounds,nOb,vOb, A, b,rx,ry,ryaw,fixTime,
 	# - sampling time scaling, is identical over the horizon
 
 	for i in 1:N
- 		if fixTime == 1
+		if fixTime == 1
 			@NLconstraint(m, x[1,i+1] == x[1,i] + Ts*(x[4,i] + Ts/2*u[2,i])*cos((x[3,i] + Ts/2*x[4,i]*tan(u[1,i])/L)))
-		    @NLconstraint(m, x[2,i+1] == x[2,i] + Ts*(x[4,i] + Ts/2*u[2,i])*sin((x[3,i] + Ts/2*x[4,i]*tan(u[1,i])/L)))
-		    @NLconstraint(m, x[3,i+1] == x[3,i] + Ts*(x[4,i] + Ts/2*u[2,i])*tan(u[1,i])/L)
-		    @NLconstraint(m, x[4,i+1] == x[4,i] + Ts*u[2,i])
-	    else
-		    @NLconstraint(m, x[1,i+1] == x[1,i] + timeScale[i]*Ts*(x[4,i] + timeScale[i]*Ts/2*u[2,i])*cos((x[3,i] + timeScale[i]*Ts/2*x[4,i]*tan(u[1,i])/L)))
-		    @NLconstraint(m, x[2,i+1] == x[2,i] + timeScale[i]*Ts*(x[4,i] + timeScale[i]*Ts/2*u[2,i])*sin((x[3,i] + timeScale[i]*Ts/2*x[4,i]*tan(u[1,i])/L)))
-		    @NLconstraint(m, x[3,i+1] == x[3,i] + timeScale[i]*Ts*(x[4,i] + timeScale[i]*Ts/2*u[2,i])*tan(u[1,i])/L)
-		    @NLconstraint(m, x[4,i+1] == x[4,i] + timeScale[i]*Ts*u[2,i])
-	    end
+			@NLconstraint(m, x[2,i+1] == x[2,i] + Ts*(x[4,i] + Ts/2*u[2,i])*sin((x[3,i] + Ts/2*x[4,i]*tan(u[1,i])/L)))
+			@NLconstraint(m, x[3,i+1] == x[3,i] + Ts*(x[4,i] + Ts/2*u[2,i])*tan(u[1,i])/L)
+			@NLconstraint(m, x[4,i+1] == x[4,i] + Ts*u[2,i])
+		else
+			@NLconstraint(m, x[1,i+1] == x[1,i] + timeScale[i]*Ts*(x[4,i] + timeScale[i]*Ts/2*u[2,i])*cos((x[3,i] + timeScale[i]*Ts/2*x[4,i]*tan(u[1,i])/L)))
+			@NLconstraint(m, x[2,i+1] == x[2,i] + timeScale[i]*Ts*(x[4,i] + timeScale[i]*Ts/2*u[2,i])*sin((x[3,i] + timeScale[i]*Ts/2*x[4,i]*tan(u[1,i])/L)))
+			@NLconstraint(m, x[3,i+1] == x[3,i] + timeScale[i]*Ts*(x[4,i] + timeScale[i]*Ts/2*u[2,i])*tan(u[1,i])/L)
+			@NLconstraint(m, x[4,i+1] == x[4,i] + timeScale[i]*Ts*u[2,i])
+		end
 
-	    if fixTime == 0
-	    	@constraint(m, timeScale[i] == timeScale[i+1])
-    	end
+		if fixTime == 0
+			@constraint(m, timeScale[i] == timeScale[i+1])
+		end
 	end
 
 	u0 = [0,0]
@@ -213,15 +224,15 @@ function ParkingDist(x0,xF,N,Ts,L,ego,XYbounds,nOb,vOb, A, b,rx,ry,ryaw,fixTime,
 	# set initial guesses
 	##############################
 	if fixTime == 0
-		setvalue(timeScale,1*ones(N+1,1))
+		set_start_value.(timeScale,1*ones(N+1,1))
 	end
-	setvalue(x,xWS')
-	setvalue(u,uWS[1:N,:]')
+	set_start_value.(x,xWS')
+	set_start_value.(u,uWS[1:N,:]')
 
 	lWS,nWS = DualMultWS(N,nOb,vOb, A, b,rx,ry,ryaw)
 
-	setvalue(l,lWS')
-	setvalue(n,nWS')
+	set_start_value.(l,lWS')
+	set_start_value.(n,nWS')
 
 	##############################
 	# solve problem
@@ -237,55 +248,55 @@ function ParkingDist(x0,xF,N,Ts,L,ego,XYbounds,nOb,vOb, A, b,rx,ry,ryaw,fixTime,
 
 	exitflag = 0
 
-	tic()
-	status = solve(m; suppress_warnings=true)
-	time1 = toq();
+	# tic()
+	status = optimize!(m)
+	# time1 = toq();
 
 	# we allow for two resolving attempts if restoration error
 	if status == :Optimal
-	    exitflag = 1
+		exitflag = 1
 	elseif status ==:Error || status ==:UserLimit || status ==:Infeasible	# #|| status ==:Infeasible
 
-		xp = getvalue(x)
-		up = getvalue(u)
+		xp = value.(x)
+		up = value.(u)
 		if fixTime == 1
 			timeScalep = ones(1,N+1)
 		else
-			timeScalep = getvalue(timeScale)
+			timeScalep = value.(timeScale)
 		end
-		lp = getvalue(l)
-		np = getvalue(n)
+		lp = value.(l)
+		np = value.(n)
 		Feasible = 0
 		Feasible = ParkingConstraints(x0,xF,N,Ts,L,ego,XYbounds,nOb,vOb, A, b,xp,up,lp,np,timeScalep,fixTime,0)
 		if Feasible == 0
-		    tic()
-		    status = solve(m; suppress_warnings=true)
-		    time2 = toq();
-		    if status == :Optimal
-		        exitflag = 1
-		    elseif status ==:Error || status ==:UserLimit
-		    	xp = getvalue(x)
-				up = getvalue(u)
+			# tic()
+			status = optimize!(m)
+			# time2 = toq();
+			if status == :Optimal
+				exitflag = 1
+			elseif status ==:Error || status ==:UserLimit
+				xp = value.(x)
+				up = value.(u)
 				if fixTime == 1
 					timeScalep = ones(1,N+1)
 				else
-					timeScalep = getvalue(timeScale)
+					timeScalep = value.(timeScale)
 				end
-				lp = getvalue(l)
-				np = getvalue(n)
+				lp = value.(l)
+				np = value.(n)
 				Feasible = 0
 				Feasible = ParkingConstraints(x0,xF,N,Ts,L,ego,XYbounds,nOb,vOb, A, b,xp,up,lp,np,timeScalep,fixTime,0)
-		        if Feasible == 0
-		            exitflag = 1
-		        else
-		            exitflag = 0
-		        end
-		    end
-	    else
-	        exitflag = 1
-	    end
+				if Feasible == 0
+					exitflag = 1
+				else
+					exitflag = 0
+				end
+			end
+		else
+			exitflag = 1
+		end
 	else
-	    exitflag = 0
+		exitflag = 0
 	end
 
 	##############################
@@ -298,17 +309,17 @@ function ParkingDist(x0,xF,N,Ts,L,ego,XYbounds,nOb,vOb, A, b,rx,ry,ryaw,fixTime,
 	# print(time)
 	# println(" seconds")
 
-	xp = getvalue(x)
-	up = getvalue(u)
+	xp = value.(x)
+	up = value.(u)
 	if fixTime == 1
 		timeScalep = ones(1,N+1)
 	else
-		timeScalep = getvalue(timeScale)
+		timeScalep = value.(timeScale)
 	end
 	# 
 
-	lp = getvalue(l)
-	np = getvalue(n)
+	lp = value.(l)
+	np = value.(n)
 
 	return xp, up, timeScalep, exitflag, time, lp, np
 

@@ -98,7 +98,7 @@ if scenario == "backwards"
 	# obstacles for optimization problem
 	nOb =  3 	# number of obstacles 
 	vOb = [3 3 2]	# number of vertices of each obstacle, vector of dimenion nOb
-	vObMPC = vOb-1
+	vObMPC = vOb .- 1
 	lOb = [   [ [-20;5], [-1.3;5], [-1.3;-5]]  , 
 	 	  [ [1.3;-5] , [1.3;5] , [20;5] ] , 
 		  [ [20;11], [-20;11]]	]		#vetices given in CLOCK-WISE direction
@@ -113,26 +113,26 @@ if scenario == "backwards"
 	oy = Float64[]
 	# obstacle 1
 	for i = -12:0.1:-1.3
-	    push!(ox, Float64(i))
-	    push!(oy, 5.0)
+		push!(ox, Float64(i))
+		push!(oy, 5.0)
 	end
 	for i in -2:5
-	    push!(ox, -1.3)
-	    push!(oy, Float64(i))
+		push!(ox, -1.3)
+		push!(oy, Float64(i))
 	end
 	# obstacle 2
 	for i in -2:5
-	    push!(ox, 1.3)
-	    push!(oy, Float64(i))
+		push!(ox, 1.3)
+		push!(oy, Float64(i))
 	end
 	for i = 1.3:0.1:12
-	    push!(ox, Float64(i))
-	    push!(oy, 5.0)
+		push!(ox, Float64(i))
+		push!(oy, 5.0)
 	end
 	# obstacle 3
 	for i = -12:12
-	    push!(ox, Float64(i))
-	    push!(oy, 11.0)
+		push!(ox, Float64(i))
+		push!(oy, 11.0)
 	end
 
 elseif scenario == "parallel"
@@ -213,9 +213,10 @@ XYbounds =  [ -15   , 15      ,  1      ,  10       ]	# constraints are on (X,Y)
 x0 = [-6  9.5   0.0    0.0]
 
 # call Hybrid A*
-tic()
+# tic()
+time1 = time();
 rx, ry, ryaw = hybrid_a_star.calc_hybrid_astar_path(x0[1], x0[2], x0[3], xF[1], xF[2], xF[3], ox, oy, hybrid_a_star.XY_GRID_RESOLUTION, hybrid_a_star.YAW_GRID_RESOLUTION, hybrid_a_star.OB_MAP_RESOLUTION)
-timeHybAstar = toq();
+timeHybAstar = time() - time1;
 
 
 ### extract (smooth) velocity profile from Hybrid A* solution ####
@@ -230,7 +231,7 @@ end
 ### Smoothen velocity 0.3 m/s^2 max acceleration ###
 v,a = veloSmooth(rv,0.3,Ts/sampleN)
 ### compute steering angle ###
-delta = atan(diff(ryaw)*L/motionStep.*sign(v[1:end-1]));
+delta = atan.(diff(ryaw)*L/motionStep.*sign.(v[1:end-1]));
 
 
 ### Down-sample for Warmstart ##########

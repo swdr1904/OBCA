@@ -38,9 +38,20 @@ function ParkingSignedDist(x0,xF,N,Ts,L,ego,XYbounds,nOb,vOb, A, b,rx,ry,ryaw,fi
 	# Define IPOPT as solver and well as solver settings
 	##############################
 	# seems to work best
-	m = Model(solver=IpoptSolver(hessian_approximation="exact",mumps_pivtol=1e-6,alpha_for_y="min",recalc_y="yes",
-	                             mumps_mem_percent=6000,max_iter=200,tol=1e-5, print_level=0,
-	                             min_hessian_perturbation=1e-12,jacobian_regularization_value=1e-7))#,nlp_scaling_method="none"
+	m = Model(()-> Ipopt.Optimizer(
+		hessian_approximation= "exact",
+		max_iter=200,
+		mumps_pivtol=1e-6,
+		mumps_mem_percent=6000,
+		recalc_y="yes",
+		alpha_for_y="min",
+		required_infeasibility_reduction=0.6,
+		min_hessian_perturbation=1e-12,
+		jacobian_regularization_value=1e-7,
+		tol=1e-5,
+		print_level=0
+	)
+	)
 
 	##############################
 	# defining optimization variables
@@ -211,15 +222,15 @@ function ParkingSignedDist(x0,xF,N,Ts,L,ego,XYbounds,nOb,vOb, A, b,rx,ry,ryaw,fi
 	# set initial guesses
 	##############################
 	if fixTime == 0
-		setvalue(timeScale,1*ones(N+1,1))
+		set_start_value.(timeScale,1*ones(N+1,1))
 	end
-	setvalue(x,xWS')
-	setvalue(u,uWS[1:N,:]')
+	set_start_value.(x,xWS')
+	set_start_value.(u,uWS[1:N,:]')
 
 	lWS,nWS = DualMultWS(N,nOb,vOb, A, b,rx,ry,ryaw)
 
-	setvalue(l,lWS')
-	setvalue(n,nWS')
+	set_start_value.(l,lWS')
+	set_start_value.(n,nWS')
 
 
 	##############################
@@ -236,20 +247,20 @@ function ParkingSignedDist(x0,xF,N,Ts,L,ego,XYbounds,nOb,vOb, A, b,rx,ry,ryaw,fi
 
 	exitflag = 0
 
-	tic()
-	status = solve(m; suppress_warnings=true)
-	time1 = toq();
+	# tic()
+	status = optimize!(m)
+	# time1 = toq();
 	
 	# tmp check
-	xp = getvalue(x)
-	up = getvalue(u)
+	xp = value.(x)
+	up = value.(u)
 	if fixTime == 1
 		timeScalep = ones(1,N+1)
 	else
-		timeScalep = getvalue(timeScale)
+		timeScalep = value.(timeScale)
 	end
-	lp = getvalue(l)
-	np = getvalue(n)
+	lp = value.(l)
+	np = value.(n)
 	tmp_useless = ParkingConstraints(x0,xF,N,Ts,L,ego,XYbounds,nOb,vOb, A, b,xp,up,lp,np,timeScalep,fixTime,1)
 	
 
@@ -258,22 +269,22 @@ function ParkingSignedDist(x0,xF,N,Ts,L,ego,XYbounds,nOb,vOb, A, b,rx,ry,ryaw,fi
 	elseif status ==:Error || status ==:UserLimit# || status ==:Infeasible
 		Feasible = 0
 		if Feasible == 0
-		    tic()
-		    status = solve(m; suppress_warnings=true)
-		    time2 = toq();
+		    # tic()
+		    status = optimize!(m)
+		    # time2 = toq();
 
 		    if status == :Optimal
 		        exitflag = 1
 		    elseif status ==:Error || status ==:UserLimit
-		    	xp = getvalue(x)
-				up = getvalue(u)
+		    	xp = value.(x)
+				up = value.(u)
 				if fixTime == 1
 					timeScalep = ones(1,N+1)
 				else
-					timeScalep = getvalue(timeScale)
+					timeScalep = value.(timeScale)
 				end
-				lp = getvalue(l)
-				np = getvalue(n)
+				lp = value.(l)
+				np = value.(n)
 				Feasible = 0
 				Feasible = ParkingConstraints(x0,xF,N,Ts,L,ego,XYbounds,nOb,vOb, A, b,xp,up,lp,np,timeScalep,fixTime,1)
 		        if Feasible == 1
@@ -299,16 +310,16 @@ function ParkingSignedDist(x0,xF,N,Ts,L,ego,XYbounds,nOb,vOb, A, b,rx,ry,ryaw,fi
 	# print(time)
 	# println(" seconds")
 
-	xp = getvalue(x)
-	up = getvalue(u)
+	xp = value.(x)
+	up = value.(u)
 	if fixTime == 1
 		timeScalep = ones(1,N+1)
 	else
-		timeScalep = getvalue(timeScale)
+		timeScalep = value.(timeScale)
 	end
 
-	lp = getvalue(l)
-	np = getvalue(n)
+	lp = value.(l)
+	np = value.(n)
 
 	return xp, up, timeScalep, exitflag, time, lp, np
 end

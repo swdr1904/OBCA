@@ -25,7 +25,7 @@
 # run this file before running main.jl
 ###############
  
-using JuMP, Ipopt, PyPlot
+using JuMP, Ipopt, PyPlot, LinearAlgebra
 include("QuadcopterDist.jl")
 include("QuadcopterSignedDist.jl")
 include("plotTrajQuadcopter.jl")
@@ -33,4 +33,4 @@ include("a_star_3D.jl")
 include("constrSatisfaction.jl")
 
 
-clear() = run(@static is_unix() ? `clear` : `cmd /c cls`)
+clear() = run(@static !Sys.iswindows() ? `clear` : `cmd /c cls`)

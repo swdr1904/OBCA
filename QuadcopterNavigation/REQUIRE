@@ -1,0 +1,6 @@
+julia v1.5.2
+JuMP v0.21.5
+Ipopt v0.6.3
+PyPlot
+NearestNeighbors
+DataStructures

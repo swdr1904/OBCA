@@ -42,23 +42,23 @@ function ParkingConstraints(x0,xF,N,Ts,L,ego,XYbounds,nOb,vOb, A, b,x,u,l,n,time
 
 	e = zeros(7,1)
 
-	c0[1] = maximum(abs(u[1,:]))-0.6	# should be <= 0
-	c0[2] = maximum(abs(u[2,:]))-0.4	# should be <= 0
-	c0[3] = maximum(abs(timeScale-1))-0.2 # should be <= 0
+	c0[1] = maximum(abs.(u[1,:]))-0.6	# should be <= 0
+	c0[2] = maximum(abs.(u[2,:]))-0.4	# should be <= 0
+	c0[3] = maximum(abs.(timeScale.-1))-0.2 # should be <= 0
 	c0[4] = -minimum(l)	# should be <= 0
 	c0[5] = -minimum(n)	# should be <= 0
 
 	#starting point
-	c1[1] = abs(x[1,1] - x0[1])		# should be <= 0
-	c1[2] = abs(x[2,1] - x0[2])		# should be <= 0
-	c1[3] = abs(x[3,1] - x0[3])		# should be <= 0
-	c1[4] = abs(x[4,1] - x0[4])		# should be <= 0
+	c1[1] = abs.(x[1,1] - x0[1])		# should be <= 0
+	c1[2] = abs.(x[2,1] - x0[2])		# should be <= 0
+	c1[3] = abs.(x[3,1] - x0[3])		# should be <= 0
+	c1[4] = abs.(x[4,1] - x0[4])		# should be <= 0
 
 	#end point
-	c2[1] = abs(x[1,N+1] - xF[1])	# should be <= 0
-	c2[2] = abs(x[2,N+1] - xF[2])	# should be <= 0
-	c2[3] = abs(x[3,N+1] - xF[3])	# should be <= 0
-	c2[4] = abs(x[4,N+1] - xF[4])	# should be <= 0
+	c2[1] = abs.(x[1,N+1] - xF[1])	# should be <= 0
+	c2[2] = abs.(x[2,N+1] - xF[2])	# should be <= 0
+	c2[3] = abs.(x[3,N+1] - xF[3])	# should be <= 0
+	c2[4] = abs.(x[4,N+1] - xF[4])	# should be <= 0
 
 	##############################
 	# dynamics of the car
@@ -67,27 +67,27 @@ function ParkingConstraints(x0,xF,N,Ts,L,ego,XYbounds,nOb,vOb, A, b,x,u,l,n,time
 	# - sampling time scaling, is identical over the horizon
 
 	for i in 1:N
- 		if fixTime == 1
+		if fixTime == 1
 			c3[1,i] = x[1,i+1] - (x[1,i] + Ts*(x[4,i] + Ts/2*u[2,i])*cos((x[3,i] + Ts/2*x[4,i]*tan(u[1,i])/L)))
-		    c3[2,i] = x[2,i+1] - (x[2,i] + Ts*(x[4,i] + Ts/2*u[2,i])*sin((x[3,i] + Ts/2*x[4,i]*tan(u[1,i])/L)))
-		    c3[3,i] = x[3,i+1] - (x[3,i] + Ts*(x[4,i] + Ts/2*u[2,i])*tan(u[1,i])/L)
-		    c3[4,i] = x[4,i+1] - (x[4,i] + Ts*u[2,i])
-	    else
-		    c3[1,i] = x[1,i+1] - (x[1,i] + timeScale[i]*Ts*(x[4,i] + timeScale[i]*Ts/2*u[2,i])*cos((x[3,i] + timeScale[i]*Ts/2*x[4,i]*tan(u[1,i])/L)))
-		    c3[1,i] = x[2,i+1] - (x[2,i] + timeScale[i]*Ts*(x[4,i] + timeScale[i]*Ts/2*u[2,i])*sin((x[3,i] + timeScale[i]*Ts/2*x[4,i]*tan(u[1,i])/L)))
-		    c3[1,i] = x[3,i+1] - (x[3,i] + timeScale[i]*Ts*(x[4,i] + timeScale[i]*Ts/2*u[2,i])*tan(u[1,i])/L)
-		    c3[1,i] = x[4,i+1] - (x[4,i] + timeScale[i]*Ts*u[2,i])
-	    end
+			c3[2,i] = x[2,i+1] - (x[2,i] + Ts*(x[4,i] + Ts/2*u[2,i])*sin((x[3,i] + Ts/2*x[4,i]*tan(u[1,i])/L)))
+			c3[3,i] = x[3,i+1] - (x[3,i] + Ts*(x[4,i] + Ts/2*u[2,i])*tan(u[1,i])/L)
+			c3[4,i] = x[4,i+1] - (x[4,i] + Ts*u[2,i])
+		else
+			c3[1,i] = x[1,i+1] - (x[1,i] + timeScale[i]*Ts*(x[4,i] + timeScale[i]*Ts/2*u[2,i])*cos((x[3,i] + timeScale[i]*Ts/2*x[4,i]*tan(u[1,i])/L)))
+			c3[1,i] = x[2,i+1] - (x[2,i] + timeScale[i]*Ts*(x[4,i] + timeScale[i]*Ts/2*u[2,i])*sin((x[3,i] + timeScale[i]*Ts/2*x[4,i]*tan(u[1,i])/L)))
+			c3[1,i] = x[3,i+1] - (x[3,i] + timeScale[i]*Ts*(x[4,i] + timeScale[i]*Ts/2*u[2,i])*tan(u[1,i])/L)
+			c3[1,i] = x[4,i+1] - (x[4,i] + timeScale[i]*Ts*u[2,i])
+		end
 	end
 
 	u0 = [0,0]
 
 	if fixTime == 1
-		c5 = maximum(abs(diff([0. u[1,:]']'))/Ts) - 0.6
+		c5 = maximum(abs.(diff([0. u[1,:]']'))/Ts) - 0.6
 		c4 = 0
 	else
-		c4 = maximum(abs(diff(timeScale)))
-		c5 = maximum(abs(diff([0 u[1,:]']'))/(timeScale[1]*Ts)) - 0.6
+		c4 = maximum(abs.(diff(timeScale)))
+		c5 = maximum(abs.(diff([0 u[1,:]']'))/(timeScale[1]*Ts)) - 0.6
 	end
 
 
@@ -114,14 +114,14 @@ function ParkingConstraints(x0,xF,N,Ts,L,ego,XYbounds,nOb,vOb, A, b,x,u,l,n,time
 
 			# norm(A'*lambda) <= 1
 			if sd == 1
-				c6[1,i] = abs((sum(Aj[k,1]*lj[k,i] for k = 1 : vOb[j]))^2 + (sum(Aj[k,2]*lj[k,i] for k = 1 : vOb[j]))^2)  - 1 
+				c6[1,i] = abs.((sum(Aj[k,1]*lj[k,i] for k = 1 : vOb[j]))^2 + (sum(Aj[k,2]*lj[k,i] for k = 1 : vOb[j]))^2)  - 1 
 			else
 				c6[1,i] = (sum(Aj[k,1]*lj[k,i] for k = 1 : vOb[j]))^2 + (sum(Aj[k,2]*lj[k,i] for k = 1 : vOb[j]))^2  - 1 
 			end
 
 			# G'*mu + R'*A*lambda = 0
-			c6[2,i] = abs((nj[1,i] - nj[3,i]) +  cos(x[3,i])*sum(Aj[k,1]*lj[k,i] for k = 1:vOb[j]) + sin(x[3,i])*sum(Aj[k,2]lj[k,i] for k = 1:vOb[j]))
-			c6[3,i] = abs((nj[2,i] - nj[4,i]) -  sin(x[3,i])*sum(Aj[k,1]*lj[k,i] for k = 1:vOb[j]) + cos(x[3,i])*sum(Aj[k,2]lj[k,i] for k = 1:vOb[j]))
+			c6[2,i] = abs.((nj[1,i] - nj[3,i]) +  cos(x[3,i])*sum(Aj[k,1]*lj[k,i] for k = 1:vOb[j]) + sin(x[3,i])*sum(Aj[k,2]lj[k,i] for k = 1:vOb[j]))
+			c6[3,i] = abs.((nj[2,i] - nj[4,i]) -  sin(x[3,i])*sum(Aj[k,1]*lj[k,i] for k = 1:vOb[j]) + cos(x[3,i])*sum(Aj[k,2]lj[k,i] for k = 1:vOb[j]))
 
 			# -g'*mu + (A*t - b)*lambda > 0
 			c6[4,i] = -(-sum(g[k]*nj[k,i] for k = 1:4) + (x[1,i]+cos(x[3,i])*offset)*sum(Aj[k,1]*lj[k,i] for k = 1:vOb[j])
@@ -133,7 +133,7 @@ function ParkingConstraints(x0,xF,N,Ts,L,ego,XYbounds,nOb,vOb, A, b,x,u,l,n,time
 	e[1] = maximum(c0)<= 5e-5
 	e[2] = maximum(c1)<= 5e-5
 	e[3] = maximum(c2)<= 5e-5
-	e[4] = maximum(abs(c3))<= 5e-5
+	e[4] = maximum(abs.(c3))<= 5e-5
 	e[5] = c4 <= 5e-5
 	e[6] = c5 <= 5e-5
 	e[7] = maximum(c6)<= 5e-5
