@@ -24,6 +24,13 @@
 
 function QuadcopterDist(x0,xF,N,Ts,R,ob1,ob2,ob3,ob4,ob5,xWS,uWS,timeWS)
 
+	# m = Model(with_optimizer(IpoptSolver(hessian_approximation="exact",mumps_pivtol=5e-7,mumps_pivtolmax=0.1,mumps_mem_percent=10000,
+	#                              recalc_y="no",alpha_for_y="min",required_infeasibility_reduction=0.65,
+	#                              min_hessian_perturbation=1e-10,jacobian_regularization_value=1e-7,tol=1e-5,
+		#                              print_level=0)))#state
+		
+	# m = Model(with_optimizer(Ipopt.Optimizer))
+
 	m = Model(()-> Ipopt.Optimizer(
 			hessian_approximation= "exact",
 			mumps_pivtol=5e-7,
@@ -62,7 +69,7 @@ function QuadcopterDist(x0,xF,N,Ts,R,ob1,ob2,ob3,ob4,ob5,xWS,uWS,timeWS)
 
 	k_F = 0.0611;#6.11*1e-8         #[N/rpm^2]
 	k_M = 0.0015;#1.5*1e-9          #[Nm/rpm^2]
-	I = [3.9,4.4,4.9]*1e-3  #[kg/m2]
+	inertia = [3.9,4.4,4.9]*1e-3  #[kg/m2]
 	L = 0.225               #[m]
 
 	w_H = sqrt((mass*g)/(k_F*4))
@@ -153,21 +160,14 @@ function QuadcopterDist(x0,xF,N,Ts,R,ob1,ob2,ob3,ob4,ob5,xWS,uWS,timeWS)
 		@NLconstraint(m, x[9,i+1] == x[9,i] + timeScale[i]*Ts*1/mass*(sum(k_F*u[j,i]^2 for j=1:4)*( cos(x[4,i])*cos(x[5,i])) - mass*g ))
 
 		# pitch_rate, roll_rate
-		@NLconstraint(m, x[10,i+1] == x[10,i] + timeScale[i]*Ts*1/I[1]*(L*k_F*(u[2,i]^2 - u[4,i]^2)                     - (I[3] - I[2])*x[11]*x[12]))
-		@NLconstraint(m, x[11,i+1] == x[11,i] + timeScale[i]*Ts*1/I[2]*(L*k_F*(u[3,i]^2 - u[1,i]^2)                     - (I[1] - I[3])*x[10]*x[12]))
-		@NLconstraint(m, x[12,i+1] == x[12,i] + timeScale[i]*Ts*1/I[3]*(k_M*(u[1,i]^2 - u[2,i]^2 + u[3,i]^2 - u[4,i]^2) - (I[2] - I[1])*x[10]*x[11]))
+		@NLconstraint(m, x[10,i+1] == x[10,i] + timeScale[i]*Ts*1/inertia[1]*(L*k_F*(u[2,i]^2 - u[4,i]^2)                     - (inertia[3] - inertia[2])*x[11]*x[12]))
+		@NLconstraint(m, x[11,i+1] == x[11,i] + timeScale[i]*Ts*1/inertia[2]*(L*k_F*(u[3,i]^2 - u[1,i]^2)                     - (inertia[1] - inertia[3])*x[10]*x[12]))
+		@NLconstraint(m, x[12,i+1] == x[12,i] + timeScale[i]*Ts*1/inertia[3]*(k_M*(u[1,i]^2 - u[2,i]^2 + u[3,i]^2 - u[4,i]^2) - (inertia[2] - inertia[1])*x[10]*x[11]))
 
 		@constraint(m, timeScale[i] == timeScale[i+1])
 	end
 
-
-	# A = vcat(Matrix{Float64}(I,3,3), -Matrix{Float64}(I,3,3));
-	A = [  1.0   0.0   0.0;
-		0.0   1.0   0.0;
-		0.0   0.0   1.0;
-		-1.0  -0.0  -0.0;
-		-0.0  -1.0  -0.0;
-		-0.0  -0.0  -1.0];
+	A = vcat(Matrix{Float64}(I,3,3), -Matrix{Float64}(I,3,3));
 
 	for i in 1:N+1
 		# rotation matrix
